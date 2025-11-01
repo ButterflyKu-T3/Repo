@@ -1,0 +1,36 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <data name="msgEnterWord" xml:space="preserve">
+    <value>Введите исходное слово (8–30 символов): </value>
+  </data>
+  <data name="msgTooShort" xml:space="preserve">
+    <value>Слово должно содержать от 8 до 30 букв!</value>
+  </data>
+  <data name="msgGameStart" xml:space="preserve">
+    <value>Начинаем игру!</value>
+  </data>
+  <data name="msgPlayerTurn" xml:space="preserve">
+    <value>Ход игрока {0}: (10 секунд)</value>
+  </data>
+  <data name="msgLoseTimeout" xml:space="preserve">
+    <value>Время вышло! Игрок {0} пропустил ход и проиграл!</value>
+  </data>
+  <data name="msgUsed" xml:space="preserve">
+    <value>Это слово уже использовалось!</value>
+  </data>
+  <data name="msgInvalid" xml:space="preserve">
+    <value>Слово нельзя составить из букв исходного слова!</value>
+  </data>
+  <data name="msgEnd" xml:space="preserve">
+    <value>Игра окончена.</value>
+  </data>
+  <data name="msgEmpty" xml:space="preserve">
+    <value>Пустой ввод — введите слово снова.</value>
+  </data>
+  <data name="msgWrongAlphabet" xml:space="preserve">
+    <value>Слово должно содержать только буквы русского алфавита!</value>
+  </data>
+  <data name="msgPressEnter" xml:space="preserve">
+    <value>Нажмите Enter для выхода...</value>
+  </data>
+</root>

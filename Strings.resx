@@ -1,0 +1,36 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <data name="msgEnterWord" xml:space="preserve">
+    <value>Enter the base word (8–30 characters): </value>
+  </data>
+  <data name="msgTooShort" xml:space="preserve">
+    <value>The word must be between 8 and 30 letters!</value>
+  </data>
+  <data name="msgGameStart" xml:space="preserve">
+    <value>Let’s start the game!</value>
+  </data>
+  <data name="msgPlayerTurn" xml:space="preserve">
+    <value>Player {0}: (10 seconds)</value>
+  </data>
+  <data name="msgLoseTimeout" xml:space="preserve">
+    <value>Time’s up! Player {0} missed the turn and lost!</value>
+  </data>
+  <data name="msgUsed" xml:space="preserve">
+    <value>This word has already been used!</value>
+  </data>
+  <data name="msgInvalid" xml:space="preserve">
+    <value>You can’t make this word from the base word!</value>
+  </data>
+  <data name="msgEnd" xml:space="preserve">
+    <value>Game over.</value>
+  </data>
+  <data name="msgEmpty" xml:space="preserve">
+    <value>Empty input — enter a word again.</value>
+  </data>
+  <data name="msgWrongAlphabet" xml:space="preserve">
+    <value>The word must contain only letters of the English alphabet!</value>
+  </data>
+  <data name="msgPressEnter" xml:space="preserve">
+    <value>Press Enter to exit...</value>
+  </data>
+</root>

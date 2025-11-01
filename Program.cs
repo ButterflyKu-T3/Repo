@@ -1,217 +1,321 @@
-﻿using System;
+﻿using Microsoft.VisualBasic;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading;
-using System.Diagnostics;
 
-class Program
+namespace WordsGame
 {
-    static void Main()
+    class Program
     {
-        Console.OutputEncoding = System.Text.Encoding.UTF8;
-        Console.WriteLine("=== Игра «Слова» / The Words Game ===");
-
-        //Выбор языка
-        string lang;
-        bool isRussian;
-        while (true)
+        static void Main()
         {
-            Console.Write("Выберите язык / Choose language (ru/en): ");
-            lang = Console.ReadLine()?.Trim().ToLower() ?? string.Empty;
-            if (lang == "ru" || lang == "en") break;
-            Console.WriteLine("Пожалуйста, введите 'ru' или 'en'. / Please enter 'ru' or 'en'.");
-        }
-        isRussian = lang == "ru";
+            Console.OutputEncoding = Encoding.UTF8;
+            Console.WriteLine("=== Игра «Слова» / The Words Game ===");
 
-        //Локализация
-        string msgEnterWord = isRussian ? "Введите исходное слово (8–30 символов): " : "Enter the base word (8–30 characters): ";
-        string msgTooShort = isRussian ? "Слово должно содержать от 8 до 30 букв!" : "The word must be between 8 and 30 letters!";
-        string msgGameStart = isRussian ? "Начинаем игру!" : "Let’s start the game!";
-        string msgPlayerTurn = isRussian ? "Ход игрока" : "Player";
-        string msgLose = isRussian ? "пропустил ход и проиграл!" : "missed the turn and lost!";
-        string msgUsed = isRussian ? "Это слово уже использовалось!" : "This word has already been used!";
-        string msgInvalid = isRussian ? "Слово нельзя составить из букв исходного слова!" : "You can’t make this word from the base word!";
-        string msgTime = isRussian ? "Время вышло!" : "Time’s up!";
-        string msgEnd = isRussian ? "Игра окончена." : "Game over.";
-        string msgEmpty = isRussian ? "Пустой ввод — введите слово снова." : "Empty input — enter a word again.";
-        string msgWrongAlphabet = isRussian ? "Слово должно содержать только буквы русского алфавита!" : "The word must contain only letters of the English alphabet!";
-        string msgPressEnter = isRussian ? "Нажмите Enter для выхода..." : "Press Enter to exit...";
-
-        // Ввод исходного слова
-        string baseWord;
-        while (true)
-        {
-            Console.Write(msgEnterWord);
-            string? input = Console.ReadLine()?.Trim().ToLower();
-
-            if (string.IsNullOrWhiteSpace(input) || input.Length <8 || input.Length >30)
+            // Language selection loop
+            string lang;
+            while (true)
             {
-                Console.WriteLine(msgTooShort);
-                continue;
+                Console.Write("Выберите язык / Choose language (ru/en): ");
+                lang = Console.ReadLine()?.Trim().ToLower() ?? string.Empty;
+                if (lang == "ru" || lang == "en") break;
+                Console.WriteLine("Пожалуйста, введите 'ru' или 'en' / Please enter 'ru' or 'en'.");
             }
 
-            if (!languageCheck(input, isRussian))
-            {
-                Console.WriteLine(msgWrongAlphabet);
-                continue;
-            }
+            // Set culture for resources
+            var culture = new CultureInfo(lang);
+            Thread.CurrentThread.CurrentCulture = culture;
+            Thread.CurrentThread.CurrentUICulture = culture;
 
-            baseWord = input;
-            break;
-        }
-
-        //Подготовка начала игры
-        Console.WriteLine("\n" + msgGameStart);
-        HashSet<string> usedWords = new();
-        int currentPlayer =1;
-        const int turnTimeoutMs =10000;
-
-        //Основной цикл
-        while (true)
-        {
-            Console.WriteLine($"\n{msgPlayerTurn} {currentPlayer}: (10 секунд)");
-
-            var turnStart = DateTime.UtcNow;
-            bool turnCompleted = false;
-
-            while (!turnCompleted)
-            {
-                var elapsed = (int)(DateTime.UtcNow - turnStart).TotalMilliseconds;
-                var remaining = turnTimeoutMs - elapsed;
-                if (remaining <=0)
-                {
-                    Console.WriteLine($"\n{msgTime} {msgPlayerTurn} {currentPlayer} {msgLose}");
-                    Console.WriteLine("\n" + msgEnd);
-                    Console.WriteLine(msgPressEnter);
-                    Console.ReadLine();
-                    return;
-                }
-
-                Console.Write("> ");
-                string? word = readLineWithTimeout(remaining);
-
-                if (word == null)
-                {
-                    Console.WriteLine($"\n{msgTime} {msgPlayerTurn} {currentPlayer} {msgLose}");
-                    Console.WriteLine("\n" + msgEnd);
-                    Console.WriteLine(msgPressEnter);
-                    Console.ReadLine();
-                    return;
-                }
-
-                word = word.ToLower().Trim();
-
-                if (string.IsNullOrWhiteSpace(word))
-                {
-                    Console.WriteLine(msgEmpty);
-                    continue;
-                }
-
-                if (!languageCheck(word, isRussian))
-                {
-                    Console.WriteLine(msgWrongAlphabet);
-                    continue;
-                }
-
-                if (usedWords.Contains(word))
-                {
-                    Console.WriteLine(msgUsed);
-                    continue;
-                }
-
-                if (!canMakeWord(word, baseWord))
-                {
-                    Console.WriteLine(msgInvalid);
-                    continue;
-                }
-
-                usedWords.Add(word);
-                currentPlayer = currentPlayer ==1 ?2 :1;
-                turnCompleted = true;
-            }
+            // Create UI and start the game
+            IGameUI ui = new ConsoleGameUI(culture);
+            var game = new Game(ui);
+            game.Start();
         }
     }
 
-    //Можно ли составить слово из исходного
-    static bool canMakeWord(string word, string baseWord)
+    /// <summary>
+    /// Interface for user interaction layer (decoupled from game logic).
+    /// </summary>
+    public interface IGameUI
     {
-        var baseLetters = baseWord
-            .GroupBy(c => c)
-            .ToDictionary(g => g.Key, g => g.Count());
-
-        foreach (char c in word)
-        {
-            if (!baseLetters.TryGetValue(c, out int count) || count <=0)
-                return false;
-            baseLetters[c] = count -1;
-        }
-
-        return true;
+        bool IsRussianLanguage();
+        string GetBaseWord();
+        string? ReadWordWithTimeout(int timeoutMs);
+        void ShowMessage(string key);
+        void ShowMessageFormatted(string key, string arg);
+        void WaitForExit();
     }
 
-    //Чтение строки
-    static string? readLineWithTimeout(int timeoutMs)
+    /// <summary>
+    /// Main game logic class.
+    /// </summary>
+    public class Game
     {
-        var sb = new StringBuilder();
-        var sw = Stopwatch.StartNew();
+        private readonly IGameUI ui;
+        private readonly HashSet<string> usedWords = new();
+        private const int TurnTimeoutMs = 10000;
+        private string baseWord = string.Empty;
+        private bool isRussian;
+        private int currentPlayer = 1;
 
-        while (true)
+        /// <summary>
+        /// Constructor for Game, injecting the UI dependency.
+        /// </summary>
+        /// <param name="ui">The user interface implementation.</param>
+        public Game(IGameUI ui)
         {
-            if (sw.ElapsedMilliseconds >= timeoutMs)
-                return null;
+            this.ui = ui;
+        }
 
-            if (Console.KeyAvailable)
+        /// <summary>
+        /// Starts the game loop.
+        /// </summary>
+        public void Start()
+        {
+            isRussian = ui.IsRussianLanguage();
+            baseWord = ui.GetBaseWord();
+            ui.ShowMessage("msgGameStart");
+
+            while (true)
             {
-                var key = Console.ReadKey(true);
-                if (key.Key == ConsoleKey.Enter)
+                ui.ShowMessageFormatted("msgPlayerTurn", currentPlayer.ToString());
+                var turnStart = DateTime.UtcNow;
+                bool turnCompleted = false;
+
+                while (!turnCompleted)
                 {
-                    Console.WriteLine();
-                    return sb.ToString();
-                }
-                else if (key.Key == ConsoleKey.Backspace)
-                {
-                    if (sb.Length >0)
+                    var elapsed = (int)(DateTime.UtcNow - turnStart).TotalMilliseconds;
+                    var remaining = TurnTimeoutMs - elapsed;
+                    if (remaining <= 0)
                     {
-                        sb.Length--;
-                        Console.Write("\b \b");
+                        ui.ShowMessageFormatted("msgLoseTimeout", currentPlayer.ToString());
+                        ui.ShowMessage("msgEnd");
+                        ui.WaitForExit();
+                        return;
+                    }
+
+                    string? word = ui.ReadWordWithTimeout(remaining);
+                    if (word == null)
+                    {
+                        ui.ShowMessageFormatted("msgLoseTimeout", currentPlayer.ToString());
+                        ui.ShowMessage("msgEnd");
+                        ui.WaitForExit();
+                        return;
+                    }
+
+                    word = word.ToLower().Trim();
+                    if (string.IsNullOrWhiteSpace(word))
+                    {
+                        ui.ShowMessage("msgEmpty");
+                        continue;
+                    }
+
+                    if (!GameHelper.IsValidForLanguage(word, isRussian))
+                    {
+                        ui.ShowMessage("msgWrongAlphabet");
+                        continue;
+                    }
+
+                    if (usedWords.Contains(word))
+                    {
+                        ui.ShowMessage("msgUsed");
+                        continue;
+                    }
+
+                    if (!CanMakeWord(word, baseWord))
+                    {
+                        ui.ShowMessage("msgInvalid");
+                        continue;
+                    }
+
+                    usedWords.Add(word);
+                    currentPlayer = currentPlayer == 1 ? 2 : 1;
+                    turnCompleted = true;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Checks if a word can be formed from the letters in the base word.
+        /// </summary>
+        /// <param name="word">The word to check.</param>
+        /// <param name="baseWord">The base word providing letters.</param>
+        /// <returns>True if the word can be made; otherwise, false.</returns>
+        private static bool CanMakeWord(string word, string baseWord)
+        {
+            var baseLetters = baseWord
+                .GroupBy(c => c)
+                .ToDictionary(g => g.Key, g => g.Count());
+
+            foreach (char c in word)
+            {
+                if (!baseLetters.TryGetValue(c, out int count) || count <= 0)
+                    return false;
+                baseLetters[c] = count - 1;
+            }
+
+            return true;
+        }
+    }
+
+    /// <summary>
+    /// Console-based UI that uses resource files for localization.
+    /// </summary>
+    public class ConsoleGameUI : IGameUI
+    {
+        private readonly CultureInfo culture;
+
+        /// <summary>
+        /// Constructor for ConsoleGameUI.
+        /// </summary>
+        /// <param name="culture">The culture info for localization.</param>
+        public ConsoleGameUI(CultureInfo culture)
+        {
+            this.culture = culture;
+        }
+
+        public bool IsRussianLanguage() => culture.TwoLetterISOLanguageName == "ru";
+
+        /// <summary>
+        /// Gets the base word from user input, validating length and alphabet.
+        /// </summary>
+        /// <returns>The validated base word.</returns>
+        public string GetBaseWord()
+        {
+            while (true)
+            {
+                Console.Write(Strings.msgEnterWord);
+                string? input = Console.ReadLine()?.Trim().ToLower();
+                if (string.IsNullOrWhiteSpace(input) || input.Length < 8 || input.Length > 30)
+                {
+                    Console.WriteLine(Strings.msgTooShort);
+                    continue;
+                }
+
+                if (!GameHelper.IsValidForLanguage(input, IsRussianLanguage()))
+                {
+                    Console.WriteLine(Strings.msgWrongAlphabet);
+                    continue;
+                }
+
+                return input;
+            }
+        }
+
+        /// <summary>
+        /// Reads a word from console with a timeout.
+        /// </summary>
+        /// <param name="timeoutMs">Timeout in milliseconds.</param>
+        /// <returns>The input word or null if timed out.</returns>
+        public string? ReadWordWithTimeout(int timeoutMs)
+        {
+            var sb = new StringBuilder();
+            var sw = Stopwatch.StartNew();
+
+            while (true)
+            {
+                if (sw.ElapsedMilliseconds >= timeoutMs)
+                    return null;
+
+                if (Console.KeyAvailable)
+                {
+                    var key = Console.ReadKey(true);
+                    if (key.Key == ConsoleKey.Enter)
+                    {
+                        Console.WriteLine();
+                        return sb.ToString();
+                    }
+                    else if (key.Key == ConsoleKey.Backspace)
+                    {
+                        if (sb.Length > 0)
+                        {
+                            sb.Length--;
+                            Console.Write("\b \b");
+                        }
+                    }
+                    else if (!char.IsControl(key.KeyChar))
+                    {
+                        sb.Append(key.KeyChar);
+                        Console.Write(key.KeyChar);
                     }
                 }
-                else if (!char.IsControl(key.KeyChar))
-                {
-                    sb.Append(key.KeyChar);
-                    Console.Write(key.KeyChar);
-                }
-            }
 
-            Thread.Sleep(20);
+                Thread.Sleep(20);
+            }
         }
 
-        return null;
+        public void ShowMessage(string key)
+        {
+            string message = key switch
+            {
+                "msgGameStart" => Strings.msgGameStart,
+                "msgEmpty" => Strings.msgEmpty,
+                "msgWrongAlphabet" => Strings.msgWrongAlphabet,
+                "msgUsed" => Strings.msgUsed,
+                "msgInvalid" => Strings.msgInvalid,
+                "msgEnd" => Strings.msgEnd,
+                _ => key // Fallback
+            };
+            Console.WriteLine(message);
+        }
+
+        public void ShowMessageFormatted(string key, string arg)
+        {
+            string format = key switch
+            {
+                "msgPlayerTurn" => Strings.msgPlayerTurn,
+                "msgLoseTimeout" => Strings.msgLoseTimeout,
+                _ => key // Fallback
+            };
+            Console.WriteLine(string.Format(format, arg));
+        }
+
+        public void WaitForExit()
+        {
+            Console.WriteLine(Strings.msgPressEnter);
+            Console.ReadLine();
+        }
     }
-    
-    //Проверка языка
-    static bool languageCheck(string s, bool isRussian)
+
+    /// <summary>
+    /// Shared helper functions for validation.
+    /// </summary>
+    public static class GameHelper
     {
-        if (string.IsNullOrEmpty(s)) return false;
-        if (isRussian)
+        /// <summary>
+        /// Validates if a string uses only the allowed alphabet for the language.
+        /// </summary>
+        /// <param name="s">The string to validate.</param>
+        /// <param name="isRussian">True for Russian alphabet; false for English.</param>
+        /// <returns>True if valid; otherwise, false.</returns>
+        public static bool IsValidForLanguage(string s, bool isRussian)
         {
-            foreach (char c in s)
+            if (string.IsNullOrEmpty(s)) return false;
+
+            if (isRussian)
             {
-                if (c >= 'а' && c <= 'я') continue;
-                if (c == 'ё') continue;
-                return false;
+                foreach (char c in s)
+                {
+                    if (c >= 'а' && c <= 'я') continue;
+                    if (c == 'ё') continue;
+                    return false;
+                }
+                return true;
             }
-            return true;
-        }
-        else
-        {
-            foreach (char c in s)
+            else
             {
-                if (c >= 'a' && c <= 'z') continue;
-                return false;
+                foreach (char c in s)
+                {
+                    if (c >= 'a' && c <= 'z') continue;
+                    return false;
+                }
+                return true;
             }
-            return true;
         }
     }
 }
